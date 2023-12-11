@@ -216,13 +216,9 @@
 
         testuser()
         */
-
-        const socketUrl = 'ws://wikimon.hatnote.com:9000';
-        const socketConnection = new wikipediaSocket.init(socketUrl, 'en', svg)
-
-        if (!socketConnection.connection || socketConnection.connection.readyState === 3) {
-            socketConnection.connect();
-        }
+        
+        initConnection(svg)
+        
 
       $('#filter').tagsInput({
         height: '45px',
@@ -254,7 +250,7 @@
         <span id="volumeWrapper" class="interface">
           <span id="volumeSlider" class="noUiSlider"></span>
         </span><a id="about-link" href="">about</a> &amp; <a href="http://blog.hatnote.com/" target="_blank">blog</a> &amp; <a href="https://twitter.com/hatnotable" target="_blank">twitter</a> &amp; <a href="https://itunes.apple.com/us/app/listen-to-wikipedia/id832934300" target="_blank">app</a></span>
-      <h1>Listen to Wikipedia</h1>
+      <h1>Listen to network traffic</h1>
     </div>
     <div id='area'></div>
     <div id='content'>

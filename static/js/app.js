@@ -115,120 +115,80 @@ function wp_action(data, svg_area, silent) {
     }
 }
 
+function initConnection(svg_area) {
+    const evtSource = new EventSource("http://localhost:9999/events?stream=messages")
 
-function wikipediaSocket() {
+    evtSource.onmessage = function(resp) {
+        const lid = "en"
+        var data = JSON.parse(resp.data);
 
+        if (!all_loaded) {
+            return;
+        }
+
+        console.log(data)
+
+        if (data.ns == 'Main' || DEBUG) {
+            if (!isNaN(data.change_size) && (TAG_FILTERS.length == 0 || $(TAG_FILTERS).filter($.map(data.hashtags, function(i) {
+                return i.toLowerCase();
+            })).length > 0)) {
+                if (TAG_FILTERS.length > 0) {
+                    console.log('Filtering for: ' + TAG_FILTERS)
+                }
+                if (data.summary &&
+                    (data.summary.toLowerCase().indexOf('revert') > -1 ||
+                    data.summary.toLowerCase().indexOf('undo') > -1 ||
+                    data.summary.toLowerCase().indexOf('undid') > -1)) {
+                    data.revert = true;
+                } else {
+                    data.revert = false;
+                }
+                var rc_str = '<a href="http://' + lid + '.wikipedia.org/wiki/User:' + data.user + '" target="_blank">' + data.user + '</a>';
+                if (data.change_size < 0) {
+                    if (data.change_size == -1) {
+                        rc_str += ' removed ' + Math.abs(data.change_size) + ' byte from';
+                    } else {
+                        rc_str += ' removed ' + Math.abs(data.change_size) + ' bytes from';
+                    }
+                } else if (data.change_size === 0) {
+                    rc_str += ' edited';
+                } else {
+                    if (data.change_size == 1) {
+                        rc_str += ' added ' + Math.abs(data.change_size) + ' byte to';
+                    } else {
+                        rc_str += ' added ' + Math.abs(data.change_size) + ' bytes to';
+                    }
+                }
+
+                rc_str += ' <a href="' + data.url + '" target="_blank">' + data.page_title + '</a> ';
+                if (data.is_anon) {
+                    rc_str += ' <span class="log-anon">(unregistered user)</span>';
+                }
+                if (data.is_bot) {
+                    rc_str += ' <span class="log-bot">(bot)</span>';
+                }
+                if (data.revert) {
+                    rc_str += ' <span class="log-undo">(undo)</span>';
+                }
+                rc_str += ' <span class="lang">(' + lid + ')</span>';
+                log_rc(rc_str, 20);
+
+                wp_action(data, svg_area);
+            } else if (!isNaN(data.change_size)) {
+                wp_action(data, svg_area, true);
+            }
+        } else if (data.page_title == 'Special:Log/newusers' &&
+                data.url != 'byemail' &&
+                s_welcome) {
+            if (user_announcements) {
+                newuser_action(data, lid, svg_area);
+            }
+            var nu_str = '<a href="http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new">' + data.user + '</a>';
+            nu_str += ' joined ' + lid + ' Wikipedia! Welcome!';
+            log_rc(nu_str, 20);
+        }
+    };
 }
-
-wikipediaSocket.init = function(ws_url, lid, svg_area) {
-    this.connect = function() {
-        $('#' + lid + '-status').html('(connecting...)');
-        var loading = true;
-        // Terminate previous connection, if any
-        if (this.connection)
-          this.connection.close();
-
-        if ('WebSocket' in window) {
-            var connection = new ReconnectingWebSocket(ws_url);
-            this.connection = connection;
-
-            connection.onopen = function() {
-                console.log('Connection open to ' + lid);
-                $('#' + lid + '-status').html('(connected)');
-                window.setInterval(() => maybe_compute_epm(svg_area), 1000);
-            };
-
-            connection.onclose = function() {
-                console.log('Connection closed to ' + lid);
-                $('#' + lid + '-status').html('(closed)');
-            };
-
-            connection.onerror = function(error) {
-                $('#' + lid + '-status').html('Error');
-                console.log('Connection Error to ' + lid + ': ' + error);
-            };
-
-            connection.onmessage = function(resp) {
-                var data = JSON.parse(resp.data);
-
-                if (!all_loaded) {
-                    return;
-                }
-
-                if (data.ns == 'Main' || DEBUG) {
-                    if (!isNaN(data.change_size) && (TAG_FILTERS.length == 0 || $(TAG_FILTERS).filter($.map(data.hashtags, function(i) {
-                        return i.toLowerCase();
-                    })).length > 0)) {
-                        if (TAG_FILTERS.length > 0) {
-                            console.log('Filtering for: ' + TAG_FILTERS)
-                        }
-                        if (data.summary &&
-                            (data.summary.toLowerCase().indexOf('revert') > -1 ||
-                            data.summary.toLowerCase().indexOf('undo') > -1 ||
-                            data.summary.toLowerCase().indexOf('undid') > -1)) {
-                            data.revert = true;
-                        } else {
-                            data.revert = false;
-                        }
-                        var rc_str = '<a href="http://' + lid + '.wikipedia.org/wiki/User:' + data.user + '" target="_blank">' + data.user + '</a>';
-                        if (data.change_size < 0) {
-                            if (data.change_size == -1) {
-                                rc_str += ' removed ' + Math.abs(data.change_size) + ' byte from';
-                            } else {
-                                rc_str += ' removed ' + Math.abs(data.change_size) + ' bytes from';
-                            }
-                        } else if (data.change_size === 0) {
-                            rc_str += ' edited';
-                        } else {
-                            if (data.change_size == 1) {
-                                rc_str += ' added ' + Math.abs(data.change_size) + ' byte to';
-                            } else {
-                                rc_str += ' added ' + Math.abs(data.change_size) + ' bytes to';
-                            }
-                        }
-
-                        rc_str += ' <a href="' + data.url + '" target="_blank">' + data.page_title + '</a> ';
-                        if (data.is_anon) {
-                            rc_str += ' <span class="log-anon">(unregistered user)</span>';
-                        }
-                        if (data.is_bot) {
-                            rc_str += ' <span class="log-bot">(bot)</span>';
-                        }
-                        if (data.revert) {
-                            rc_str += ' <span class="log-undo">(undo)</span>';
-                        }
-                        rc_str += ' <span class="lang">(' + lid + ')</span>';
-                        log_rc(rc_str, 20);
-
-                        wp_action(data, svg_area);
-                    } else if (!isNaN(data.change_size)) {
-                        wp_action(data, svg_area, true);
-                    }
-                } else if (data.page_title == 'Special:Log/newusers' &&
-                           data.url != 'byemail' &&
-                           s_welcome) {
-                    if (user_announcements) {
-                        newuser_action(data, lid, svg_area);
-                    }
-                    var nu_str = '<a href="http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new">' + data.user + '</a>';
-                    nu_str += ' joined ' + lid + ' Wikipedia! Welcome!';
-                    log_rc(nu_str, 20);
-                }
-            };
-        }
-    };
-    this.close = function() {
-        if (this.connection) {
-            this.connection.close();
-        }
-    };
-};
-
-wikipediaSocket.close = function() {
-    if (this.connection) {
-        this.connection.close();
-    }
-};
 
 var log_rc = function(rc_str, limit) {
     $('#rc-log').prepend('<li>' + rc_str + '</li>');
