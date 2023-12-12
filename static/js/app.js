@@ -17,18 +17,11 @@ function wp_action(data, svg_area, silent) {
     }
     /*rate_bg.attr('opacity', opacity)*/
 
-    var size = data.change_size;
+    var size = data.packet_length;
     var label_text = data.page_title;
     var csize = size;
     var no_label = false;
-    var type;
-    if (data.is_anon) {
-        type = 'anon';
-    } else if (data.is_bot) {
-        type = 'bot';
-    } else {
-        type = 'user';
-    }
+    var type = 'user'; // TODO: Figure out how these influence viz
 
     var circle_id = 'd' + ((Math.random() * 100000) | 0);
     var abs_size = Math.abs(size);
@@ -129,52 +122,24 @@ function initConnection(svg_area) {
         console.log(data)
 
         if (data.ns == 'Main' || DEBUG) {
-            if (!isNaN(data.change_size) && (TAG_FILTERS.length == 0 || $(TAG_FILTERS).filter($.map(data.hashtags, function(i) {
-                return i.toLowerCase();
-            })).length > 0)) {
-                if (TAG_FILTERS.length > 0) {
-                    console.log('Filtering for: ' + TAG_FILTERS)
-                }
-                if (data.summary &&
-                    (data.summary.toLowerCase().indexOf('revert') > -1 ||
-                    data.summary.toLowerCase().indexOf('undo') > -1 ||
-                    data.summary.toLowerCase().indexOf('undid') > -1)) {
-                    data.revert = true;
-                } else {
-                    data.revert = false;
-                }
-                var rc_str = '<a href="http://' + lid + '.wikipedia.org/wiki/User:' + data.user + '" target="_blank">' + data.user + '</a>';
-                if (data.change_size < 0) {
-                    if (data.change_size == -1) {
-                        rc_str += ' removed ' + Math.abs(data.change_size) + ' byte from';
-                    } else {
-                        rc_str += ' removed ' + Math.abs(data.change_size) + ' bytes from';
-                    }
-                } else if (data.change_size === 0) {
-                    rc_str += ' edited';
-                } else {
-                    if (data.change_size == 1) {
-                        rc_str += ' added ' + Math.abs(data.change_size) + ' byte to';
-                    } else {
-                        rc_str += ' added ' + Math.abs(data.change_size) + ' bytes to';
-                    }
-                }
+            if (!isNaN(data.packet_length)) {
+                var rc_str = `<a href="http://${data.source_ip}" target="_blank">${data.source_ip}</a> sent ${Math.abs(data.packet_length)} bytes to <a href="http://${data.destination_ip}" target="_blank">${data.destination_ip}</a>`
 
-                rc_str += ' <a href="' + data.url + '" target="_blank">' + data.page_title + '</a> ';
-                if (data.is_anon) {
-                    rc_str += ' <span class="log-anon">(unregistered user)</span>';
-                }
-                if (data.is_bot) {
-                    rc_str += ' <span class="log-bot">(bot)</span>';
-                }
-                if (data.revert) {
-                    rc_str += ' <span class="log-undo">(undo)</span>';
-                }
-                rc_str += ' <span class="lang">(' + lid + ')</span>';
+                // rc_str += ' <a href="' + data.url + '" target="_blank">' + data.page_title + '</a> ';
+                // if (data.is_anon) {
+                //     rc_str += ' <span class="log-anon">(unregistered user)</span>';
+                // }
+                // if (data.is_bot) {
+                //     rc_str += ' <span class="log-bot">(bot)</span>';
+                // }
+                // if (data.revert) {
+                //     rc_str += ' <span class="log-undo">(undo)</span>';
+                // }
+                // rc_str += ' <span class="lang">(' + lid + ')</span>';
                 log_rc(rc_str, 20);
 
                 wp_action(data, svg_area);
-            } else if (!isNaN(data.change_size)) {
+            } else if (!isNaN(data.packet_length)) {
                 wp_action(data, svg_area, true);
             }
         } else if (data.page_title == 'Special:Log/newusers' &&

@@ -20,25 +20,14 @@ var (
 )
 
 type Event struct {
-	Action        string   `json:"action"`
-	ChangeSize    int      `json:"change_size"`
-	Flags         string   `json:"flags"`
-	Hashtags      []string `json:"hashtags"`
-	IsAnon        bool     `json:"is_anon"`
-	IsBot         bool     `json:"is_bot"`
-	IsMinor       bool     `json:"is_minor"`
-	IsNew         bool     `json:"is_new"`
-	IsUnpatrolled bool     `json:"is_unpatrolled"`
-	Mentions      []string `json:"mentions"`
-	NS            string   `json:"ns"`
-	PageTitle     string   `json:"page_title"`
-	ParentRevId   string   `json:"parent_rev_id"`
-	ParsedSummary string   `json:"parsed_summary"`
-	RevId         string   `json:"rev_id"`
-	Section       string   `json:"section"`
-	Summary       string   `json:"summary"`
-	URL           string   `json:"url"`
-	User          string   `json:"user"`
+	NS        string `json:"ns"`
+	PageTitle string `json:"page_title"`
+	URL       string `json:"url"`
+	User      string `json:"user"`
+
+	PacketLength  int    `json:"packet_length"`
+	SourceIP      string `json:"source_ip"`
+	DestinationIP string `json:"destination_ip"`
 }
 
 func main() {
@@ -48,6 +37,9 @@ func main() {
 	Server = server
 
 	mux := http.NewServeMux()
+	fs := http.FileServer(http.Dir("./static"))
+
+	mux.Handle("/", fs)
 	mux.HandleFunc("/events", server.ServeHTTP)
 
 	c := cors.New(cors.Options{})
@@ -73,18 +65,14 @@ func main() {
 
 		for pkt := range packets {
 			evt := Event{
-				Action:      "edit",
-				ChangeSize:  pkt.Metadata().Length,
-				Flags:       "M",
-				IsMinor:     true,
-				NS:          "Main",
-				PageTitle:   pkt.NetworkLayer().NetworkFlow().Dst().String(),
-				ParentRevId: "1189341884",
-				RevId:       "1187982211",
-				Section:     "External links",
-				Summary:     "/* External links */",
-				URL:         "https://en.wikipedia.org/w/index.php?diff=1189341884&oldid=1187982211",
-				User:        "DepressedPer",
+				NS:        "Main",
+				PageTitle: pkt.NetworkLayer().NetworkFlow().Dst().String(),
+				URL:       "https://en.wikipedia.org/w/index.php?diff=1189341884&oldid=1187982211",
+				User:      "Blah",
+
+				PacketLength:  pkt.Metadata().Length,
+				SourceIP:      pkt.NetworkLayer().NetworkFlow().Src().String(),
+				DestinationIP: pkt.NetworkLayer().NetworkFlow().Dst().String(),
 			}
 			byt, err := json.Marshal(evt)
 			if err != nil {
