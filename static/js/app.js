@@ -21,7 +21,7 @@ function wp_action(data, svg_area, silent) {
   var label_text = data.page_title;
   var csize = size;
   var no_label = false;
-  var type = 'user'; // TODO: Figure out how these influence viz
+  var type = data.type;
 
   var circle_id = 'd' + ((Math.random() * 100000) | 0);
   var abs_size = Math.abs(size);
@@ -31,11 +31,7 @@ function wp_action(data, svg_area, silent) {
   var x = Math.random() * (width - size) + size;
   var y = Math.random() * (height - size) + size;
   if (!silent) {
-    if (csize > 0) {
-      play_sound(size, 'add', 1);
-    } else {
-      play_sound(size, 'sub', 1);
-    }
+    play_sound(size, type, 1)
   }
 
   if (silent) {
@@ -123,7 +119,14 @@ function initConnection(svg_area) {
 
     console.log(data)
 
-    if (data.ns == 'Main' || DEBUG) {
+    if (data.type === "CNAME") {
+      if (user_announcements) {
+        newuser_action(data, lid, svg_area);
+      }
+      var nu_str = '<a href="http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new">' + data.user + '</a>';
+      nu_str += ' joined ' + lid + ' Wikipedia! Welcome!';
+      log_rc(nu_str, 20);
+    } else {
       if (!isNaN(data.packet_length)) {
         var rc_str = `<a href="http://${data.source_ip}" target="_blank">${data.source_ip}</a> sent ${Math.abs(data.packet_length)} bytes to <a href="http://${data.destination_ip}" target="_blank">${data.destination_ip}</a>`
 
@@ -131,9 +134,7 @@ function initConnection(svg_area) {
         // if (data.is_anon) {
         //     rc_str += ' <span class="log-anon">(unregistered user)</span>';
         // }
-        // if (data.is_bot) {
-        //     rc_str += ' <span class="log-bot">(bot)</span>';
-        // }
+        rc_str += ` <span class="log-${data.type}">(${data.type})</span>`;
         // if (data.revert) {
         //     rc_str += ' <span class="log-undo">(undo)</span>';
         // }
@@ -144,15 +145,6 @@ function initConnection(svg_area) {
       } else if (!isNaN(data.packet_length)) {
         wp_action(data, svg_area, true);
       }
-    } else if (data.page_title == 'Special:Log/newusers' &&
-      data.url != 'byemail' &&
-      s_welcome) {
-      if (user_announcements) {
-        newuser_action(data, lid, svg_area);
-      }
-      var nu_str = '<a href="http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new">' + data.user + '</a>';
-      nu_str += ' joined ' + lid + ' Wikipedia! Welcome!';
-      log_rc(nu_str, 20);
     }
   };
 }
@@ -183,7 +175,7 @@ function play_sound(size, type, volume) {
   index = Math.max(1, index);
   if (current_notes < note_overlap) {
     current_notes++;
-    if (type == 'add') {
+    if (type == 'CNAME') {
       celesta[index].play();
     } else {
       clav[index].play();

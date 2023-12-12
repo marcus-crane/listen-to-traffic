@@ -120,13 +120,13 @@ label {
     color: #bdc3c7;
     padding: auto .5em;
 }
-.log-bot {
+.log-A {
     color: rgb(155, 89, 182);
 }
-.log-anon {
+.log-CNAME {
     color: rgb(46, 204, 113);
 }
-.log-undo {
+.log-AAAA {
     color: rgb(236, 112, 99)
 }
 .loc {

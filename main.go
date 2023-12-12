@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/r3labs/sse/v2"
 	"github.com/rs/cors"
@@ -25,6 +27,8 @@ type Event struct {
 	URL       string `json:"url"`
 	User      string `json:"user"`
 
+	Type          string `json:"type"`
+	DomainName    string `json:"domain_name"`
 	PacketLength  int    `json:"packet_length"`
 	SourceIP      string `json:"source_ip"`
 	DestinationIP string `json:"destination_ip"`
@@ -57,33 +61,66 @@ func main() {
 		}
 		defer handle.Close()
 
-		if err := handle.SetBPFFilter("tcp"); err != nil {
+		if err := handle.SetBPFFilter("udp or tcp"); err != nil {
 			panic(err)
 		}
 
 		packets := gopacket.NewPacketSource(handle, handle.LinkType()).Packets()
 
-		for pkt := range packets {
-			evt := Event{
-				NS:        "Main",
-				PageTitle: pkt.NetworkLayer().NetworkFlow().Dst().String(),
-				URL:       "https://en.wikipedia.org/w/index.php?diff=1189341884&oldid=1187982211",
-				User:      "Blah",
+		for packet := range packets {
+			dnsLayer := packet.Layer(layers.LayerTypeDNS)
+			if dnsLayer != nil {
+				dnsPacket, ok := dnsLayer.(*layers.DNS)
+				if !ok {
+					fmt.Println("Failed to parse DNS packet")
+					continue
+				}
 
-				PacketLength:  pkt.Metadata().Length,
-				SourceIP:      pkt.NetworkLayer().NetworkFlow().Src().String(),
-				DestinationIP: pkt.NetworkLayer().NetworkFlow().Dst().String(),
+				for _, q := range dnsPacket.Questions {
+					evt := Event{
+						NS:        "Main",
+						PageTitle: string(q.Name),
+						URL:       "https://en.wikipedia.org/w/index.php?diff=1189341884&oldid=1187982211",
+						User:      "Blah",
+
+						DomainName:    string(q.Name),
+						Type:          q.Type.String(),
+						PacketLength:  packet.Metadata().Length,
+						SourceIP:      packet.NetworkLayer().NetworkFlow().Src().String(),
+						DestinationIP: packet.NetworkLayer().NetworkFlow().Dst().String(),
+					}
+					byt, err := json.Marshal(evt)
+					if err != nil {
+						continue
+					}
+					Server.Publish("messages", &sse.Event{
+						Data: byt,
+					})
+				}
+
+				for _, a := range dnsPacket.Answers {
+					spew.Dump(a) 
+					evt := Event{
+						NS:        "Main",
+						PageTitle: a.IP.String(),
+						URL:       "https://en.wikipedia.org/w/index.php?diff=1189341884&oldid=1187982211",
+						User:      "Blah",
+
+						DomainName:    string(a.IP.String()),
+						Type:          a.Type.String(),
+						PacketLength:  packet.Metadata().Length,
+						SourceIP:      packet.NetworkLayer().NetworkFlow().Src().String(),
+						DestinationIP: packet.NetworkLayer().NetworkFlow().Dst().String(),
+					}
+					byt, err := json.Marshal(evt)
+					if err != nil {
+						continue
+					}
+					Server.Publish("messages", &sse.Event{
+						Data: byt,
+					})
+				}
 			}
-			byt, err := json.Marshal(evt)
-			if err != nil {
-				continue
-			}
-			Server.Publish("messages", &sse.Event{
-				Data: byt,
-			})
-			fmt.Println("published event")
-			// fmt.Printf("Length: %d\n", pkt.Metadata().Length)
-			// fmt.Printf("TS: %s\n\n", pkt.Metadata().Timestamp)
 		}
 	}()
 
