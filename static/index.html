@@ -208,37 +208,14 @@
             }))
         }
 
-        /*
         function testuser() {
             data = {user: 'Slaporte'}
             newuser_action(data, 'en', svg)
         }
 
         testuser()
-        */
         
         initConnection(svg)
-        
-
-      $('#filter').tagsInput({
-        height: '45px',
-        width: '80%',
-        'delimiter': [' ', ','],
-        defaultText: 'Add a tag',
-        defaultTextWidth: 100,
-        unique: false,
-        onChange: function() {
-          TAG_FILTERS = [];
-          $('.tag span').each(function(val) {
-              var tag = $(this).text().trim().replace('#', '').toLowerCase();
-              if($.inArray(tag, TAG_FILTERS) === -1){
-                TAG_FILTERS.push(tag);
-              }
-          });
-          update_tag_warning(svg);
-          console.log('Watching for: ' + TAG_FILTERS)
-        }
-      });
 
     })
     </script>
@@ -261,7 +238,6 @@
                 </ul>
                  <div class="note">
                   <p id="edit_counter"></p>
-                  <p>For more, see Wikipedia's RecentChanges pages for <a href="http://www.wikipedia.org/">each language</a>.</p>
                 </div>
             </div>
         </div>

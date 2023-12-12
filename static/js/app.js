@@ -1,12 +1,12 @@
 function wp_action(data, svg_area, silent) {
   var silent = silent || false;
   if (!silent) {
-    total_edits += 1;
+    total_packets += 1;
   }
-  if (total_edits == 1) {
-    $('#edit_counter').html('You have listened to <span>' + total_edits + ' edit</span>.');
+  if (total_packets == 1) {
+    $('#edit_counter').html('You have listened to <span>' + total_packets + ' edit</span>.');
   } else {
-    $('#edit_counter').html('You have listened to a total of <span>' + insert_comma(total_edits) + ' edits</span>.');
+    $('#edit_counter').html('You have listened to a total of <span>' + insert_comma(total_packets) + ' packets</span>.');
   }
   var now = new Date();
   edit_times.push(now);

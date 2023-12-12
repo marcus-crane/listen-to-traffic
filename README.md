@@ -1,6 +1,6 @@
-# Listen to Wikipedia
+# Listen to traffic
 
-Real-time visualization and sonification of Wikipedia activity.
+Real-time visualization and sonification of captured network traffic.
 
 ## About
 
